@@ -1,2 +1,2 @@
-data_directory = '{{ pg_custom_data_dir | default(pg_data_dir) }}'wal_level = 'replica'
+data_directory = '{{ pg_copy_data | default(pg_data) }}'wal_level = 'replica'
 max_wal_senders = 3archive_mode = 'on'
