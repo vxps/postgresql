@@ -1,0 +1,85 @@
+---
+- name: Install required packages
+  apt:
+    name:
+      - postgresql-client
+      - python3-psycopg2
+      - acl
+    state: present
+
+- name: Ensure required directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0775'
+  loop:
+    - /custom/data
+    - "{{ pg_data }}/main"
+
+- name: Check if postgres initialized
+  stat:
+    path: "{{ pg_data }}/main/PG_VERSION"
+  register: pgdata_dir_version
+
+- name: Initialize postgres if not initialized
+  become: true
+  become_user: postgres
+  command: "{{ pg_data }}/bin/initdb -D {{ pg_data }}/main"
+  when: not pgdata_dir_version.stat.exists
+
+- name: Start PostgreSQL
+  become: true
+  service:
+    name: postgresql.service
+    state: started
+    enabled: true
+
+- name: Setup pg_hba.conf
+  become: true
+  become_user: postgres
+  template:
+    src: templates/pg_hba.conf.j2
+    dest: "{{ pg_data }}/main/pg_hba.conf"
+    owner: root
+    group: root
+    mode: '0600'
+  notify: "restart pgsql"
+
+- name: Stop PostgreSQL
+  become: true
+  service:
+    name: postgresql.service
+    state: stopped
+
+- name: Copy data directory
+  become: true
+  become_user: postgres
+  copy:
+    src: "{{ pg_data }}/"
+    dest: "{{ pg_copy_data }}/"
+    owner: root
+    group: root
+    mode: '0755'
+    recursive: yes
+
+- name: Update data directory in postgresql.conf
+  become: true
+  become_user: postgres
+  lineinfile:
+    path: "{{ pg_config }}/postgresql.conf"
+    regexp: '^data_directory'
+    line: "data_directory = '{{ pg_copy_data }}/{{ pg_version }}/main'"
+
+- name: Set new data directory fact
+  set_fact:
+    pg_data: "{{ pg_copy_data }}/{{ pg_version }}"
+
+- name: Start PostgreSQL with new data directory
+  become: true
+  service:
+    name: postgresql.service
+    state: started
+
+- include_tasks: "{{ pg_role }}.yml"

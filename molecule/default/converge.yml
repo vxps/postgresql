@@ -1,0 +1,21 @@
+---
+- name: Converge master
+  hosts: db_master
+  become: yes
+  tasks:
+    - name: Execute master
+      include_role:
+        name: postgresql
+      vars:
+        postgres_role: master
+
+- name: Converge Replica
+  hosts: db_replica
+  become: true
+  tasks:
+    - name: Execute replica
+      include_role:
+        name: postgresql
+      vars:
+        pgsql_role: replica
+

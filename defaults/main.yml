@@ -1,0 +1,29 @@
+---
+pg_version: 15
+pg_password: postgres
+
+pg_data: "/var/lib/postgresql/15"
+pg_config: "/etc/postgresql/15/main"
+pg_copy_data: /tmp/postgres
+
+users_hba: md5
+replication_hba: md5
+
+pg_users:
+  - name: postgres
+    password: password
+    encrypted: true
+    role_attr_flags: SUPERUSER
+    port: 5432
+
+pg_databases:
+  - name: database
+    conn_limit: 10
+    port: 5432
+    roles: postgres
+    privs: ALL
+
+master_ip:
+  - 192.168.56.201
+replica_ip:
+  - 192.168.56.202

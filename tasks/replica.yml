@@ -1,0 +1,29 @@
+---
+- name: Stop postgres and manage data directory
+  become: true
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining: true
+  tasks:
+    - name: Stop postgres service
+      service: 
+        name: postgresql.service
+        state: stopped
+
+    - name: Remove and create data directory
+      file:
+        path: "{{ pg_data }}/main"
+        state: "{{ 'directory' if item == 'create' else 'absent' }}"
+        mode: go-rwx
+      loop:
+        - absent
+        - create
+
+- name: Create backup from master
+  become: true
+  become_user: postgres
+  command: "pg_basebackup -P -R -X stream -c fast -h {{ item }} -U postgres -D {{ pg_data }}/main"
+  environment:
+    PGPASSWORD: "{{ pg_password }}"
+  loop: "{{ master_ip }}"
+  notify: "restart pgsql"
